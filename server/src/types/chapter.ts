@@ -1,7 +1,5 @@
 export interface Chapter {
-    title: string;
-    url: string;
-
-
-    group?: string;
+  title: string;
+  url: string;
+  group?: string;
 }

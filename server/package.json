@@ -16,9 +16,11 @@
     "axios": "^1.18.1",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
+    "domhandler": "^5.0.3",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.9.3",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -26,5 +28,8 @@
     "@types/node": "^26.0.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { NovelInfo } from "../types/novel";
+import type { DownloadReport, JobView, NovelInfo } from "../types/novel";
 
 export const api = axios.create({
   baseURL: "/api",
@@ -14,6 +14,7 @@ export async function fetchNovelInfo(url: string): Promise<NovelInfo> {
 export interface DownloadEpubResult {
   blob: Blob;
   fileName: string;
+  report: DownloadReport | null;
 }
 
 function fallbackFileName(novel?: NovelInfo): string {
@@ -24,8 +25,7 @@ function fallbackFileName(novel?: NovelInfo): string {
 /**
  * Pulls the filename out of a Content-Disposition header, e.g.
  * `attachment; filename="Some Title.epub"` or the RFC 5987
- * `filename*=UTF-8''Some%20Title.epub` form. Falls back to a name derived
- * from the novel title if the header is missing or unparsable.
+ * `filename*=UTF-8''Some%20Title.epub` form.
  */
 function parseFileName(header: string | undefined, fallback: string): string {
   if (!header) return fallback;
@@ -41,51 +41,61 @@ function parseFileName(header: string | undefined, fallback: string): string {
   return plainMatch?.[1] ?? fallback;
 }
 
-/**
- * Calls the backend, which crawls every chapter, builds the EPUB, and
- * returns the finished file directly in the response body — there is no
- * job id / progress endpoint on the backend. The frontend simulates the
- * progress panel locally while this request is in flight (see
- * useDownloadEpub) and resolves it the moment this promise settles.
- */
-export async function downloadEpub(
-  url: string,
-  novel?: NovelInfo
-): Promise<DownloadEpubResult> {
-  const response = await api.post("/novel/download", { url, novel }, {
+function parseReport(header: string | undefined): DownloadReport | null {
+  if (!header) return null;
+  try {
+    return JSON.parse(decodeURIComponent(header)) as DownloadReport;
+  } catch {
+    return null;
+  }
+}
+
+// ===========================
+// Job chạy nền
+// ===========================
+export async function createEpubJob(url: string, passwords: string[] = []): Promise<JobView> {
+  const { data } = await api.post<JobView>("/novel/jobs", { url, passwords });
+  return data;
+}
+
+export async function getEpubJob(id: string): Promise<JobView> {
+  const { data } = await api.get<JobView>(`/novel/jobs/${encodeURIComponent(id)}`);
+  return data;
+}
+
+export async function downloadJobFile(job: JobView, novel?: NovelInfo): Promise<DownloadEpubResult> {
+  const response = await api.get(`/novel/jobs/${encodeURIComponent(job.id)}/file`, {
     responseType: "blob",
-    timeout: 0, // EPUB generation can take a while; don't time this one out
+    timeout: 0,
   });
-
-  const fileName = parseFileName(
-    response.headers["content-disposition"],
-    fallbackFileName(novel)
-  );
-
-  return { blob: response.data as Blob, fileName };
+  return {
+    blob: response.data as Blob,
+    fileName:
+      job.fileName ?? parseFileName(response.headers["content-disposition"], fallbackFileName(novel)),
+    report: job.report ?? parseReport(response.headers["x-bebook-report"]),
+  };
 }
 
 /**
- * Axios resolves error bodies as a Blob too (since responseType is "blob"),
- * so a JSON `{ message: "..." }` error from the backend has to be read back
- * out of the blob manually.
+ * Axios resolves error bodies as a Blob when responseType is "blob",
+ * so a JSON `{ message: "..." }` error has to be read back out manually.
  */
-export async function extractDownloadErrorMessage(
-  err: unknown,
-  fallback: string
-): Promise<string> {
-  if (axios.isAxiosError(err) && err.response?.data instanceof Blob) {
-    try {
-      const text = await err.response.data.text();
-      const parsed = JSON.parse(text) as { message?: string };
-      if (typeof parsed.message === "string" && parsed.message.trim()) {
-        return parsed.message;
+export async function extractApiErrorMessage(err: unknown, fallback: string): Promise<string> {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data;
+    if (data instanceof Blob) {
+      try {
+        const parsed = JSON.parse(await data.text()) as { message?: string };
+        if (parsed.message?.trim()) return parsed.message;
+      } catch {
+        // not JSON
       }
-    } catch {
-      // Body wasn't JSON — fall through to the generic message below.
+    } else if (typeof data?.message === "string" && data.message.trim()) {
+      return data.message;
     }
+    if (err.response?.status === 401) return "Authentication required.";
+    if (err.message) return err.message;
   }
-  if (axios.isAxiosError(err) && err.message) return err.message;
   if (err instanceof Error && err.message) return err.message;
   return fallback;
 }

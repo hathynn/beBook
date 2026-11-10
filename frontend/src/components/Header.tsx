@@ -13,11 +13,11 @@ export function Header() {
       </div>
       <div className="space-y-1.5">
         <p className="text-base font-medium text-ink">
-          Convert WordPress Novel to EPUB
+          Convert WordPress &amp; TruyenFull Novels to EPUB
         </p>
         <p className="text-sm text-ink-muted max-w-md mx-auto">
-          Paste a WordPress novel URL, preview the novel information, then
-          download it as an EPUB.
+          Paste a WordPress or TruyenFull novel URL (any TruyenFull domain works),
+          preview the novel information, then download it as an EPUB.
         </p>
       </div>
     </header>

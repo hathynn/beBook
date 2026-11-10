@@ -1,0 +1,14 @@
+{
+  "name": "bebook",
+  "private": true,
+  "description": "Convert WordPress & TruyenFull novels to EPUB",
+  "scripts": {
+    "build": "npm ci --prefix frontend --include=dev && npm run build --prefix frontend && npm ci --prefix server --include=dev && npm run build --prefix server",
+    "start": "node server/dist/index.js",
+    "dev:server": "npm run dev --prefix server",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "engines": {
+    "node": ">=20.9"
+  }
+}

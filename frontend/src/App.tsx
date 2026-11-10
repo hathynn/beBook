@@ -9,6 +9,8 @@ import { ProgressPanel } from "./components/ProgressPanel";
 import { DownloadButton } from "./components/DownloadButton";
 import { ToastNotification, notifyError, notifySuccess } from "./components/ToastNotification";
 import { Footer } from "./components/Footer";
+import { PasswordInput } from "./components/PasswordInput";
+import { ReportNotice } from "./components/ReportNotice";
 import { useNovelInfo } from "./hooks/useNovelInfo";
 import { useEpubDownload } from "./hooks/useDownloadEpub";
 
@@ -23,15 +25,16 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 
 export default function App() {
   const [url, setUrl] = useState("");
+  const [passwords, setPasswords] = useState("");
   const novelInfo = useNovelInfo();
-  const { progress, start, retry, fileUrl } = useEpubDownload();
+  const { progress, start, retry, fileUrl, report } = useEpubDownload();
 
   const novel = novelInfo.data ?? null;
 
   const handleAnalyze = () => {
     const trimmed = url.trim();
     if (!trimmed) {
-      notifyError("Paste a WordPress novel URL first.");
+      notifyError("Paste a novel URL first.");
       return;
     }
     novelInfo.mutate(trimmed, {
@@ -43,12 +46,21 @@ export default function App() {
 
   const handleDownload = () => {
     if (!novel) return;
-    start(url.trim(), novel);
+    const list = passwords
+      .split(/\r?\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    start(url.trim(), novel, list);
   };
 
   useEffect(() => {
     if (progress?.status === "success") {
-      notifySuccess("EPUB generated successfully");
+      const problems = (report?.locked.length ?? 0) + (report?.failed.length ?? 0);
+      if (problems > 0) {
+        notifyError(`EPUB generated, but ${problems} chapter${problems > 1 ? "s" : ""} could not be loaded.`);
+      } else {
+        notifySuccess("EPUB generated successfully");
+      }
     }
     if (progress?.status === "error" && progress.error) {
       notifyError(progress.error);
@@ -88,9 +100,20 @@ export default function App() {
             <NovelPreviewCard novel={novel} />
             <SummaryCard summary={novel.summary} />
 
+            {novel.sourceType !== "truyenfull" && (
+              <PasswordInput
+                value={passwords}
+                onChange={setPasswords}
+                disabled={downloadState === "loading"}
+                hasHints={novel.hasPasswordHints}
+              />
+            )}
+
             {progress && (progress.status === "running" || progress.status === "error" || progress.status === "success") && (
               <ProgressPanel progress={progress} />
             )}
+
+            {progress?.status === "success" && report && <ReportNotice report={report} />}
 
             <DownloadButton
               state={downloadState}

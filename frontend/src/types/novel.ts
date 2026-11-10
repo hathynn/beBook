@@ -6,6 +6,19 @@ export interface NovelInfo {
   coverUrl: string | null;
   summary: string;
   chapterCount: number;
+  genres?: string[];
+  /** Trang mục lục có ghi mật khẩu (backend sẽ tự thử). */
+  hasPasswordHints?: boolean;
+  /** Nguồn backend nhận diện: "wordpress" | "truyenfull" */
+  sourceType?: string;
+}
+
+/** Kết quả tải do backend trả về qua header X-Bebook-Report. */
+export interface DownloadReport {
+  chapters: number;
+  locked: string[];
+  failed: string[];
+  images: { embedded: number; failed: number };
 }
 
 export interface NovelInfoRequest {
@@ -15,12 +28,11 @@ export interface NovelInfoRequest {
 export type JobStatus = "idle" | "running" | "success" | "error";
 
 export type JobStepId =
+  | "queued"
   | "novel-info"
-  | "chapter-list"
   | "download-chapters"
-  | "clean-html"
+  | "download-images"
   | "build-epub"
-  | "package-epub"
   | "finished";
 
 export type StepState = "pending" | "current" | "done" | "error";
@@ -32,11 +44,8 @@ export interface JobStep {
 }
 
 /**
- * Progress is simulated entirely on the frontend — the backend has no
- * job-id / progress endpoint and just returns the finished EPUB file once
- * POST /api/novel/download resolves. `percent` and `steps` are a client-side
- * approximation that fills up while the request is in flight and snaps to
- * 100% / all-done the moment the response (or an error) comes back.
+ * Tiến độ thật từ backend: client tạo job (POST /api/novel/jobs) rồi hỏi
+ * GET /api/novel/jobs/:id mỗi giây, cuối cùng tải file ở /jobs/:id/file.
  */
 export interface JobProgress {
   status: JobStatus;
@@ -46,4 +55,18 @@ export interface JobProgress {
   steps: JobStep[];
   error: string | null;
   fileName: string | null;
+}
+
+/** Trạng thái job do backend trả về. */
+export interface JobView {
+  id: string;
+  status: "queued" | "running" | "done" | "error";
+  phase: "info" | "chapters" | "images" | "build";
+  done: number;
+  total: number;
+  title?: string;
+  error?: string;
+  report?: DownloadReport;
+  fileName?: string;
+  queuePosition: number;
 }

@@ -1,6 +1,14 @@
 # Dependencies
 node_modules/
 
+# Generated EPUBs (server no longer writes here)
+server/output/
+
+# TypeScript build info / emitted config
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
 # Environment variables
 .env
 .env.local

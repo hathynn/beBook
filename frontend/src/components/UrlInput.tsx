@@ -31,9 +31,9 @@ export function UrlInput({ value, onChange, onSubmit, disabled }: UrlInputProps)
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        placeholder="Paste WordPress novel URL..."
+        placeholder="Paste WordPress or TruyenFull novel URL..."
         className="w-full rounded-xl border border-border bg-surface py-4 pl-11 pr-4 text-[15px] text-ink placeholder:text-ink-faint shadow-soft transition-colors duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-canvas disabled:text-ink-faint"
-        aria-label="WordPress novel URL"
+        aria-label="Novel URL"
       />
     </div>
   );
